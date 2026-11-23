@@ -1,7 +1,7 @@
 """Builds the job matrix: one row per requested persona, with its device.
 Env: PERSONAS (comma-separated ids, "all" for every persona of the platform, "none" or empty to skip it), PLATFORM (android | ios).
 Prints <platform>=<json> for $GITHUB_OUTPUT."""
-import json, os
+import json, os, re
 
 platform = os.environ.get("PLATFORM", "android")
 wanted = [p.strip() for p in os.environ.get("PERSONAS", "").split(",") if p.strip()]
@@ -16,6 +16,11 @@ if missing:
 other = [p for p in wanted if personas[p].get("platform", platform) != platform]
 if other:  # its device settings would be silently replaced by defaults
     raise SystemExit(f"Not {platform} personas: {other}. Put them in the other platform's list.")
+# The time zone goes into an adb shell command: only IANA-style ids such as Asia/Seoul
+bad_zone = [p for p in wanted if not re.fullmatch(r"([A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)*)?",
+                                                  personas[p].get("timezone", ""))]
+if bad_zone:
+    raise SystemExit(f"Time zone is not an IANA id (such as Asia/Seoul): {bad_zone}")
 rows = []
 for pid in wanted:
     p = personas[pid]
@@ -27,7 +32,9 @@ for pid in wanted:
         row.update({"simulator": d.get("simulator", "iPhone 16"), "ios": str(d.get("ios", "18")),
                     "text_size": d.get("text_size", "large")})
     else:
+        # timezone: IANA id the emulator is set to before the app is installed (empty = the runner's UTC)
         row.update({"profile": d.get("profile", "pixel_6"), "api": d.get("android_api", 34),
-                    "font_scale": str(d.get("font_scale", 1.0)), "device": d.get("name", "Pixel 6, Android 14")})
+                    "font_scale": str(d.get("font_scale", 1.0)), "device": d.get("name", "Pixel 6, Android 14"),
+                    "timezone": p.get("timezone", "")})
     rows.append(row)
 print(f"{platform}=" + json.dumps(rows, ensure_ascii=False))

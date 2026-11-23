@@ -126,6 +126,9 @@ gh workflow run agent-testers.yml -f source_repo=you/app -f app_id=com.you.app \
 | `android_build` + `apk_path`, `ios_build` + `ios_app_path` | Your own build command, or a download of a prebuilt app (paths relative to `app_dir`) |
 | `block_hosts` | Analytics hosts blocked during tests |
 | `record_video` | Screen recording of each phone, encrypted with the reports |
+| `grant_permissions` | Android: grant every runtime permission at install (default off: the app asks, as on a new phone) |
+
+A persona may set `timezone` (an IANA id such as `Asia/Seoul`): the Android emulator is set to it before the app is installed. Without it the phone keeps the runner's UTC.
 
 **Supported out of the box** (detected automatically):
 

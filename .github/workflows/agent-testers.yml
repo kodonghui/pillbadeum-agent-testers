@@ -54,6 +54,10 @@ on:
         description: Record each phone's screen (encrypted with the results)
         type: boolean
         default: false
+      grant_permissions:
+        description: "Android: grant every runtime permission at install (off = the app asks, as on a new phone)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -220,12 +224,14 @@ jobs:
           FONT_SCALE: ${{ matrix.font_scale }}
           THEME: ${{ matrix.theme }}
           LOCALE: ${{ matrix.locale }}
+          TIMEZONE: ${{ matrix.timezone }}
           GEO: ${{ matrix.geo }}
           APP_ID: ${{ inputs.app_id }}
           BRIEF: ${{ inputs.brief }}
           MODEL: ${{ inputs.model }}
           BLOCK_HOSTS: ${{ inputs.block_hosts }}
           RECORD_VIDEO: ${{ inputs.record_video }}
+          GRANT_PERMISSIONS: ${{ inputs.grant_permissions }}
         with:
           api-level: ${{ matrix.api }}
           target: google_apis

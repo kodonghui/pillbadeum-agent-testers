@@ -11,19 +11,33 @@ for h in $BLOCK_HOSTS; do
   ip=$(adb shell ping -c 1 -W 2 "$h" 2>&1 | head -1 | grep -oE '\(([0-9]{1,3}\.){3}[0-9]{1,3}\)' | tr -d '()')
   case "$ip" in ""|0.0.0.0|127.*) ;; *) echo "$h reachable from the emulator ($ip): aborting"; exit 1 ;; esac
 done
-# 2. Phone language (the emulator boots in en-US; google_apis images allow adb root)
-if [ "$(adb shell getprop persist.sys.locale | tr -d '\r')" != "$LOCALE" ]; then
+# 2. Phone language and time zone (the emulator boots in en-US and the runner's UTC;
+# google_apis images allow adb root). Both are read when zygote starts, so one restart
+# applies them before the app is installed. TIMEZONE is an IANA id checked by matrix.py.
+TIMEZONE=${TIMEZONE:-}
+case "$TIMEZONE" in *[!A-Za-z0-9_/+-]*) echo "Time zone is not an IANA id: aborting"; exit 1 ;; esac
+PROPS=""
+[ "$(adb shell getprop persist.sys.locale | tr -d '\r')" != "$LOCALE" ] && PROPS="setprop persist.sys.locale $LOCALE; "
+if [ -n "$TIMEZONE" ] && [ "$(adb shell getprop persist.sys.timezone | tr -d '\r')" != "$TIMEZONE" ]; then
+  adb shell settings put global auto_time_zone 0   # or the network time zone may come back
+  PROPS="${PROPS}setprop persist.sys.timezone $TIMEZONE; "
+fi
+if [ -n "$PROPS" ]; then
   adb root >/dev/null 2>&1; sleep 3; adb wait-for-device
-  adb shell "setprop persist.sys.locale $LOCALE; setprop ctl.restart zygote"; sleep 10; adb wait-for-device
+  adb shell "${PROPS}setprop ctl.restart zygote"; sleep 10; adb wait-for-device
   for i in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 3; done
 fi
+[ -n "$TIMEZONE" ] && echo "Time zone: $(adb shell getprop persist.sys.timezone | tr -d '\r'), $(adb shell date +%Z | tr -d '\r')"
 # 3. App + persona settings. The package inside the APK wins over app_id
 # (which may be the iOS bundle id)
 AAPT2=$(ls "${ANDROID_HOME:-/usr/local/lib/android/sdk}"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
 PKG=$([ -n "$AAPT2" ] && "$AAPT2" dump packagename app.apk 2>/dev/null | tr -d '\r')
 if [ -n "$PKG" ] && [ "$PKG" != "$APP_ID" ]; then echo "Package read from the APK (differs from app_id)"; APP_ID=$PKG; fi
 export APP_ID
-adb install -r -g app.apk || adb install -r app.apk
+# Runtime permissions are not granted up front, so the agent sees the app's own
+# permission requests and what happens after a denial. GRANT_PERMISSIONS=true grants them all.
+if [ "${GRANT_PERMISSIONS:-false}" = true ]; then adb install -r -g app.apk || adb install -r app.apk
+else adb install -r app.apk; fi
 adb shell settings put system font_scale "${FONT_SCALE:-1.0}"
 [ "${THEME:-light}" = dark ] && adb shell cmd uimode night yes
 adb emu geo fix "${GEO#*,}" "${GEO%,*}" >/dev/null 2>&1   # longitude first

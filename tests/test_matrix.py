@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -61,11 +62,38 @@ class Matrix(unittest.TestCase):
         self.assertNotEqual(out.returncode, 0)
         self.assertIn(ios_one, out.stderr)
 
+    def test_android_rows_carry_the_persona_time_zone(self):
+        for p, row in zip([p for p in PERSONAS if p["platform"] == "android"], rows("android", "all")):
+            self.assertEqual(row["timezone"], p.get("timezone", ""), p["id"])
+
+    def test_time_zone_that_is_not_an_iana_id_stops_the_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            bad = {"id": "x", "platform": "android", "timezone": "Asia/Seoul; reboot"}
+            (Path(tmp) / "personas.json").write_text(json.dumps([bad]), encoding="utf-8")
+            env = dict(os.environ, PLATFORM="android", PERSONAS="x")
+            out = subprocess.run([sys.executable, str(ROOT / "scripts/matrix.py")], cwd=tmp, env=env,
+                                 capture_output=True, text=True)
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("not an IANA id", out.stderr)
+
     def test_rows_have_every_key_the_jobs_read(self):
         for platform in ("android", "ios"):
             used = set(re.findall(r"matrix\.([a-z_]+)", job(platform)))
             for row in rows(platform, "all"):
                 self.assertFalse(used - set(row), f"{platform} job reads {used - set(row)}, missing in {row}")
+
+
+class Permissions(unittest.TestCase):
+    def test_runtime_permissions_are_granted_only_on_request(self):
+        inputs = re.search(r"\n      grant_permissions:\n(.*?)\n      [a-z_]+:|\n      grant_permissions:\n(.*?)\npermissions:",
+                           WORKFLOW, re.S)
+        self.assertIsNotNone(inputs, "workflow input grant_permissions")
+        self.assertIn("default: false", inputs.group(0))
+        self.assertIn("GRANT_PERMISSIONS: ${{ inputs.grant_permissions }}", job("android"))
+        script = (ROOT / "scripts/android/run_agent.sh").read_text(encoding="utf-8")
+        for line in script.splitlines():
+            if re.search(r"adb install .*-g\b", line):
+                self.assertIn('"${GRANT_PERMISSIONS:-false}" = true', line)
 
 
 class Personas(unittest.TestCase):
@@ -85,6 +113,21 @@ class Personas(unittest.TestCase):
                 lat, lon = p["geo"]
                 self.assertTrue(-90 <= lat <= 90 and -180 <= lon <= 180)
                 self.assertIn(p["device"]["theme"], ("light", "dark"))
+
+    def test_time_zones_are_iana_ids_on_android_personas(self):
+        try:
+            import zoneinfo  # Python 3.9+, reads the system time zone data
+            known = zoneinfo.available_timezones()
+        except ImportError:
+            known = set()
+        for p in PERSONAS:
+            if "timezone" not in p:
+                continue
+            with self.subTest(p["id"]):
+                self.assertEqual(p["platform"], "android", "only the Android job sets the time zone")
+                self.assertRegex(p["timezone"], r"^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)+$")
+                if known:
+                    self.assertIn(p["timezone"], known)
 
     def test_devices_use_values_the_emulators_accept(self):
         for p in PERSONAS:
