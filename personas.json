@@ -178,5 +178,32 @@
     "locale": "zh-CN",
     "geo": [31.2304, 121.4737],
     "device": {"simulator": "iPhone 16e", "ios": 18, "text_size": "extra-large", "theme": "light"}
+  },
+  {
+    "id": "pb_sunja",
+    "platform": "android",
+    "profile": "72세, 은퇴한 미용실 주인. 혈압약과 당뇨약을 스스로 챙겨 먹어요. 글자를 가장 크게(200%) 키워 쓰고, 영어나 어려운 말이 나오면 멈칫해요. 천천히 읽고 한 번에 하나씩 눌러요.",
+    "goal": "자기 약 두 가지(아침 약, 저녁 약)를 적어 두고, 오늘 아침 약을 먹었다고 기록한 뒤 어제 기록을 찾아봐요.",
+    "locale": "ko-KR",
+    "geo": [37.5665, 126.978],
+    "device": {"name": "Pixel 7, Android 14, 글자 200%", "profile": "pixel_7", "android_api": 34, "font_scale": 2.0, "theme": "light"}
+  },
+  {
+    "id": "pb_jihye",
+    "platform": "android",
+    "profile": "46세 직장인. 따로 사는 어머니의 약을 대신 기록하는 보호자예요. 늘 다크 모드를 쓰고, 바빠서 앱을 자주 나갔다가 다시 들어와요.",
+    "goal": "어머니(가상 엄마)를 대상자로 더하고 약 항목 하나를 알림과 함께 만든 뒤, 잘못 적은 기록 하나를 고쳐요.",
+    "locale": "ko-KR",
+    "geo": [37.4563, 126.7052],
+    "device": {"name": "Pixel 6, Android 13", "profile": "pixel_6", "android_api": 33, "font_scale": 1.0, "theme": "dark"}
+  },
+  {
+    "id": "pb_taeho",
+    "platform": "android",
+    "profile": "27세 대학원생. 설명을 읽지 않고 빠르게 눌러요. 작은 옛 폰을 써요. 빈 칸, 아주 긴 글, 이모지를 일부러 넣어 보기도 해요.",
+    "goal": "가장 빨리 첫 복용 기록까지 가고, 잘못 누른 기록을 되돌려요.",
+    "locale": "ko-KR",
+    "geo": [35.1796, 129.0756],
+    "device": {"name": "Nexus 5, Android 11", "profile": "Nexus 5", "android_api": 30, "font_scale": 1.0, "theme": "light"}
   }
 ]
